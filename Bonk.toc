@@ -1,0 +1,6 @@
+## Interface: 11502
+## Title: Bonk
+## Notes: Plays a bonk sound when you kill another player.
+## Version: 1.0
+
+Bonk.lua
