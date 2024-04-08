@@ -3,23 +3,26 @@ BONK = {
 	debug = false,
 }
 
-local SFX_PATH = "Interface\\AddOns\\Bonk\\sfx\\"
-local SFX_CHANNEL = "Master"
-
-local SFX = {
+SFX = {
 	player_kill = {
 		melee = "bonk.ogg",
 		spell = "awp.ogg",
 	},
 }
 
+local SFX_PATH = "Interface\\AddOns\\Bonk\\sfx\\"
+local SFX_CHANNEL = "Master"
+
 -- plays a sound effect
-local function playSfx(sound)
+BONK.play = function(sound)
 	if not sound then
-		return
+		error("sound effect cant be nil", 1)
 	end
 
-	PlaySoundFile(SFX_PATH .. sound, SFX_CHANNEL)
+	local path = SFX_PATH .. sound
+	if not PlaySoundFile(path, SFX_CHANNEL) then
+		error("sound effect does not exist: " .. path, 1)
+	end
 end
 
 -- returns true if the guid is a player
@@ -53,17 +56,13 @@ local function isMelee(spellId, spellSchool)
 	return false
 end
 
-local function handlePlayerKill(spellId, spellSchool)
-	if BONK.debug then
-		local name, _, _, _, minRange, maxRange = GetSpellInfo(spellId)
-		print(string.format("Bonk: %s (school: %d, minRange: %d, maxRange: %d)", name, spellSchool, minRange, maxRange))
+local function debugSpell(spellId)
+	if not BONK.debug then
+		return
 	end
 
-	if isMelee(spellId, spellSchool) then
-		playSfx(SFX.player_kill.melee)
-	else
-		playSfx(SFX.player_kill.spell)
-	end
+	local name, _, _, _, minRange, maxRange = GetSpellInfo(spellId)
+	print(format("Bonk: %s (school: %d, minRange: %d, maxRange: %d)", name, spellSchool, minRange, maxRange))
 end
 
 local eventFrame = CreateFrame("frame", "Bonk")
@@ -93,8 +92,14 @@ eventFrame:SetScript("OnEvent", function(self)
 	end
 
 	-- overkill means the target was killed by this event
-	if overkill and overkill > 0 then
-		handlePlayerKill(spellId, spellSchool)
+	local killingBlow = overkill and overkill > 0
+	if killingBlow then
+		if isMelee(spellId, spellSchool) then
+			BONK.play(SFX.player_kill.melee)
+		else
+			debugSpell(spellId)
+			BONK.play(SFX.player_kill.spell)
+		end
 	end
 end)
 
