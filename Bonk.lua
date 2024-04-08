@@ -1,63 +1,103 @@
--- them sounds
-local sounds = {
-    PLAYER_KILL = {
-        spellCrit = "Interface\\AddOns\\Bonk\\sfx\\awp.ogg",
-        normal = "Interface\\AddOns\\Bonk\\sfx\\bonk.ogg"
-    },
+-- globals
+BONK = {
+	debug = false,
 }
 
-local function playSound(soundFilePath)
-    if soundFilePath then
-        PlaySoundFile(soundFilePath)
-    end
+local SFX_PATH = "Interface\\AddOns\\Bonk\\sfx\\"
+local SFX_CHANNEL = "Master"
+
+local SFX = {
+	player_kill = {
+		melee = "bonk.ogg",
+		spell = "awp.ogg",
+	},
+}
+
+-- plays a sound effect
+local function playSfx(sound)
+	if not sound then
+		return
+	end
+
+	PlaySoundFile(SFX_PATH .. sound, SFX_CHANNEL)
 end
 
-function eventDestinationIsAnotherPlayer(destGUID)
-    local firstPart = strsplit("-", destGUID)[1]
-    return firstPart == "Player"
+-- returns true if the guid is a player
+local function guidIsPlayer(guid)
+	local firstPart = strsplit("-", guid)[1]
+	return firstPart == "Player"
 end
 
-function isPartyKill(event)
-    return event == "PARTY_KILL"
+-- returns true if the spell is a melee spell
+-- this is a rough approximation based on the spell's school and max range
+local function isMelee(spellId, spellSchool)
+	-- if the spell is not found, we assume it is a melee swing
+	if not spellId or spellId == -1 then
+		return true
+	end
+
+	local _, _, _, _, minRange, maxRange = GetSpellInfo(spellId)
+
+	-- anything with a minimum range is obviously ranged
+	if minRange > 0 then
+		return false
+	end
+
+	-- physical damage with short range is considered melee
+	local physical = spellSchool == 1
+	if physical and maxRange <= 8 then
+		return true
+	end
+
+	-- anything else is considered ranged
+	return false
 end
 
-function isRangedSpellDamage(spellId)
-    local _, _, spellSchool = GetSpellInfo(spellId)
+local function handlePlayerKill(spellId, spellSchool)
+	if BONK.debug then
+		local name, _, _, _, minRange, maxRange = GetSpellInfo(spellId)
+		print(string.format("Bonk: %s (school: %d, minRange: %d, maxRange: %d)", name, spellSchool, minRange, maxRange))
+	end
 
-    -- Spell schools: 1 = Physical, 2 = Holy, 4 = Fire, 8 = Nature, 16 = Frost, 32 = Shadow, 64 = Arcane
-    -- Combining spell schools indicates a multi-school spell. For simplicity, this example checks for pure schools.
-    -- Note: This is a simplified approach and might not accurately classify all ranged damage correctly.
-    local rangedSchools = {
-        [4] = true,  -- Fire
-        [8] = true,  -- Nature
-        [16] = true, -- Frost
-        [32] = true, -- Shadow
-        [64] = true, -- Arcane
-    }
-
-    return rangedSchools[spellSchool] or false
+	if isMelee(spellId, spellSchool) then
+		playSfx(SFX.player_kill.melee)
+	else
+		playSfx(SFX.player_kill.spell)
+	end
 end
 
+local eventFrame = CreateFrame("frame", "Bonk")
+eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+eventFrame:SetScript("OnEvent", function(self)
+	local event = { CombatLogGetCurrentEventInfo() }
+	local type, sourceName, destGUID = event[2], event[5], event[8]
 
-local function CombatLogEventHandler(self)
-    local _, event, _, _, s_name, _, _, destGUID, _, _, _, spellId, _, _, _, overkill, _, _, _, _, critical = CombatLogGetCurrentEventInfo()
-    
-    -- if not me, return
-    if s_name ~= UnitName("player") then return end
-    
-    
-    if isPartyKill(event) and eventDestinationIsAnotherPlayer(destGUID) then
-        local soundToPlay = sounds.PLAYER_KILL.normal
-        
-        if critical and (overkill and overkill > 0) and isRangedSpellDamage(spellId) then
-            soundToPlay = sounds.PLAYER_KILL.spellCrit
-        end
+	-- we are only interested in events where the source is the local player
+	if sourceName ~= UnitName("player") then
+		return
+	end
 
-        playSound(soundToPlay)
-    end
+	-- we are only interested in events where the target is a player
+	-- /!\ unless we are in debug mode
+	if not (guidIsPlayer(destGUID) or BONK.debug) then
+		return
+	end
 
+	-- look for damage events with overkill
+	local overkill, spellId, spellSchool = false, -1, 1
+	if type == "SPELL_DAMAGE" then
+		spellId, overkill, spellSchool = event[12], event[16], event[17]
+	end
+	if type == "SWING_DAMAGE" then
+		overkill = event[13]
+	end
+
+	-- overkill means the target was killed by this event
+	if overkill and overkill > 0 then
+		handlePlayerKill(spellId, spellSchool)
+	end
+end)
+
+if BONK.debug then
+	print("Bonk loaded in debug mode")
 end
-
-local EventFrame = CreateFrame("frame", "EventFrame")
-EventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-EventFrame:SetScript("OnEvent", CombatLogEventHandler)
