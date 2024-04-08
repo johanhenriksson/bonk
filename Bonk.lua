@@ -1,6 +1,6 @@
 -- globals
 BONK = {
-	debug = false,
+	debug = true,
 }
 
 SFX = {
