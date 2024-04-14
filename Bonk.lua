@@ -27,7 +27,7 @@ end
 
 -- returns true if the guid is a player
 local function guidIsPlayer(guid)
-	local firstPart = strsplit("-", guid)[1]
+	local firstPart = strsplit("-", guid)
 	return firstPart == "Player"
 end
 
