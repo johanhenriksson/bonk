@@ -63,6 +63,10 @@ local function debugSpell(spellId)
 	if not BONK.debug then
 		return
 	end
+	if not spellId or spellId == -1 then
+		print("Bonk: melee swing")
+		return
+	end
 
 	local name, _, _, _, minRange, maxRange = GetSpellInfo(spellId)
 	print(format("Bonk: %s (school: %d, minRange: %d, maxRange: %d)", name, spellSchool, minRange, maxRange))
@@ -98,10 +102,14 @@ eventFrame:SetScript("OnEvent", function(self)
 	if type == "SWING_DAMAGE" then
 		overkill, critical = event[13], event[21]
 	end
+	if type == "RANGE_DAMAGE" then
+		spellId, overkill, critical = 5019, event[16], event[21]
+	end
 
 	-- overkill means the target was killed by this event
 	local killingBlow = overkill and overkill > 0
 	if killingBlow then
+		debugSpell(spellId)
 		if isMelee(spellId, spellSchool) then
 			if critical then
 				BONK.play(SFX.player_kill.meleeCritical)
@@ -109,7 +117,6 @@ eventFrame:SetScript("OnEvent", function(self)
 				BONK.play(SFX.player_kill.melee)
 			end
 		else
-			debugSpell(spellId)
 			if critical then
 				BONK.play(SFX.player_kill.spellCritical)
 			else
