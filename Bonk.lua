@@ -1,13 +1,15 @@
 -- globals
 BONK = {
-	debug = false,
+	debug = false
 }
 
 SFX = {
 	player_kill = {
 		melee = "bonk.ogg",
-		spell = "awp.ogg",
-	},
+		meleeCritical = "pipe.ogg",
+		spell = "pew.ogg",
+		spellCritical = "awp.ogg"
+	}
 }
 
 local SFX_PATH = "Interface\\AddOns\\Bonk\\sfx\\"
@@ -68,7 +70,7 @@ end
 local eventFrame = CreateFrame("frame", "Bonk")
 eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 eventFrame:SetScript("OnEvent", function(self)
-	local event = { CombatLogGetCurrentEventInfo() }
+	local event = {CombatLogGetCurrentEventInfo()}
 	local type, sourceName, destGUID = event[2], event[5], event[8]
 
 	-- we are only interested in events where the source is the local player
@@ -83,22 +85,30 @@ eventFrame:SetScript("OnEvent", function(self)
 	end
 
 	-- look for damage events with overkill
-	local overkill, spellId, spellSchool = false, -1, 1
+	local overkill, critical, spellId, spellSchool = false, false, -1, 1
 	if type == "SPELL_DAMAGE" then
-		spellId, overkill, spellSchool = event[12], event[16], event[17]
+		spellId, overkill, spellSchool, critical = event[12], event[16], event[17], event[21]
 	end
 	if type == "SWING_DAMAGE" then
-		overkill = event[13]
+		overkill, critical = event[13], event[21]
 	end
 
 	-- overkill means the target was killed by this event
 	local killingBlow = overkill and overkill > 0
 	if killingBlow then
 		if isMelee(spellId, spellSchool) then
-			BONK.play(SFX.player_kill.melee)
+			if critical then
+				BONK.play(SFX.player_kill.meleeCritical)
+			else
+				BONK.play(SFX.player_kill.melee)
+			end
 		else
 			debugSpell(spellId)
-			BONK.play(SFX.player_kill.spell)
+			if critical then
+				BONK.play(SFX.player_kill.spellCritical)
+			else
+				BONK.play(SFX.player_kill.spell)
+			end
 		end
 	end
 end)
