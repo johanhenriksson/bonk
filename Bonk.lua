@@ -72,10 +72,7 @@ local function debugSpell(spellId)
 	print(format("Bonk: %s (school: %d, minRange: %d, maxRange: %d)", name, spellSchool, minRange, maxRange))
 end
 
-local eventFrame = CreateFrame("frame", "Bonk")
-eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-eventFrame:SetScript("OnEvent", function(self)
-	local event = { CombatLogGetCurrentEventInfo() }
+local function onCombatLogEvent(event)
 	local type, sourceName, destGUID = event[2], event[5], event[8]
 
 	-- we are only interested in events where the target is a player
@@ -124,6 +121,14 @@ eventFrame:SetScript("OnEvent", function(self)
 			end
 		end
 	end
+end
+
+local bonkFrame = CreateFrame("frame", "Bonk")
+bonkFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+bonkFrame:SetScript("OnEvent", function(_, event, ...)
+	if event == "COMBAT_LOG_EVENT_UNFILTERED" then
+		onCombatLogEvent({ CombatLogGetCurrentEventInfo() })
+	end
 end)
 
 SLASH_BONK1 = "/bonk"
@@ -131,3 +136,4 @@ function SlashCmdList.BONK(msg, editbox) -- 4.
 	BONK.debug = not BONK.debug
 	print("Bonk debug mode: " .. tostring(BONK.debug))
 end
+
