@@ -1,6 +1,6 @@
 -- globals
 BONK = {
-	debug = false
+	debug = false,
 }
 
 SFX = {
@@ -8,8 +8,9 @@ SFX = {
 		melee = "bonk.ogg",
 		meleeCritical = "pipe.ogg",
 		spell = "pew.ogg",
-		spellCritical = "awp.ogg"
-	}
+		spellCritical = "awp.ogg",
+	},
+	party_kill = "coin.ogg",
 }
 
 local SFX_PATH = "Interface\\AddOns\\Bonk\\sfx\\"
@@ -70,17 +71,22 @@ end
 local eventFrame = CreateFrame("frame", "Bonk")
 eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 eventFrame:SetScript("OnEvent", function(self)
-	local event = {CombatLogGetCurrentEventInfo()}
+	local event = { CombatLogGetCurrentEventInfo() }
 	local type, sourceName, destGUID = event[2], event[5], event[8]
-
-	-- we are only interested in events where the source is the local player
-	if sourceName ~= UnitName("player") then
-		return
-	end
 
 	-- we are only interested in events where the target is a player
 	-- /!\ unless we are in debug mode
 	if not (guidIsPlayer(destGUID) or BONK.debug) then
+		return
+	end
+
+	-- play a sound when a party member kills an enemy
+	if type == "PARTY_KILL" and (sourceName ~= UnitName("player") or BONK.debug) then
+		BONK.play(SFX.party_kill)
+	end
+
+	-- we are only interested in events where the source is the local player
+	if sourceName ~= UnitName("player") then
 		return
 	end
 
