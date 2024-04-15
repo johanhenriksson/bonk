@@ -126,6 +126,8 @@ eventFrame:SetScript("OnEvent", function(self)
 	end
 end)
 
-if BONK.debug then
-	print("Bonk loaded in debug mode")
+SLASH_BONK1 = "/bonk"
+function SlashCmdList.BONK(msg, editbox) -- 4.
+	BONK.debug = not BONK.debug
+	print("Bonk debug mode: " .. tostring(BONK.debug))
 end
