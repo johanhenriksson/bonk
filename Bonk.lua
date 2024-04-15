@@ -4,17 +4,16 @@ BONK = {
 }
 
 SFX = {
-	player_kill = {
-		melee = "bonk.ogg",
-		spell = "awp.ogg",
-	},
+	bonk = "bonk.ogg",
+	awp = "awp.ogg",
 }
 
+local PREFIX = "Bonk"
 local SFX_PATH = "Interface\\AddOns\\Bonk\\sfx\\"
 local SFX_CHANNEL = "Master"
 
 -- plays a sound effect
-BONK.play = function(sound)
+BONK.play = function(sound, sync)
 	if not sound then
 		error("sound effect cant be nil", 1)
 	end
@@ -22,6 +21,10 @@ BONK.play = function(sound)
 	local path = SFX_PATH .. sound
 	if not PlaySoundFile(path, SFX_CHANNEL) then
 		error("sound effect does not exist: " .. path, 1)
+	end
+
+	if sync then
+		SendAddonMessage(PREFIX, "play:" .. sound, "RAID")
 	end
 end
 
@@ -65,10 +68,7 @@ local function debugSpell(spellId)
 	print(format("Bonk: %s (school: %d, minRange: %d, maxRange: %d)", name, spellSchool, minRange, maxRange))
 end
 
-local eventFrame = CreateFrame("frame", "Bonk")
-eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-eventFrame:SetScript("OnEvent", function(self)
-	local event = { CombatLogGetCurrentEventInfo() }
+local function onCombatLogEvent(event)
 	local type, sourceName, destGUID = event[2], event[5], event[8]
 
 	-- we are only interested in events where the source is the local player
@@ -95,11 +95,36 @@ eventFrame:SetScript("OnEvent", function(self)
 	local killingBlow = overkill and overkill > 0
 	if killingBlow then
 		if isMelee(spellId, spellSchool) then
-			BONK.play(SFX.player_kill.melee)
+			BONK.play(SFX.bonk)
 		else
 			debugSpell(spellId)
-			BONK.play(SFX.player_kill.spell)
+			BONK.play(SFX.awp)
 		end
+	end
+end
+
+local function onAddonMessage(prefix, message)
+	if prefix ~= PREFIX then
+		return
+	end
+
+	args = strsplit(":", message)
+	command = args[1]
+
+	if command == "play" then
+		BONK.play(args[2])
+	end
+end
+
+local bonkFrame = CreateFrame("frame", "Bonk")
+bonkFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+bonkFrame:RegisterEvent("CHAT_MSG_ADDON")
+bonkFrame:SetScript("OnEvent", function(_, event, ...)
+	if event == "CHAT_MSG_ADDON" then
+		onAddonMessage(...)
+	end
+	if event == "COMBAT_LOG_EVENT_UNFILTERED" then
+		onCombatLogEvent({ CombatLogGetCurrentEventInfo() })
 	end
 end)
 
