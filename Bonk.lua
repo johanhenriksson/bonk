@@ -22,8 +22,8 @@ SFX = {
 
 local DEFAULT_CONFIG = {
 	debug = false,
-	recent_timeout = 10,
-	announce_delay = 0.2,
+	recent_timeout = 8,
+	announce_delay = 0.3,
 
 	player_kill = {
 		melee = SFX.bonk,
@@ -101,6 +101,10 @@ local function isMelee(spellId, spellSchool)
 	-- physical damage with short range is considered melee
 	local physical = spellSchool == 1
 	if physical and maxRange <= 8 then
+		return true
+	end
+
+	if BONK.meleeSpells[spellId] then
 		return true
 	end
 
