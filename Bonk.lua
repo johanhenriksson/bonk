@@ -213,7 +213,7 @@ local function onCombatLogEvent(event)
 		onDamage(sourceName, overkill, critical, spellId, spellSchool)
 	end
 	if type == "SWING_DAMAGE" then
-		local spellId, overkill, spellSchool, critical = -1, event[13], 1, event[21]
+		local spellId, overkill, spellSchool, critical = -1, event[13], 1, event[18]
 		onDamage(sourceName, overkill, critical, spellId, spellSchool)
 	end
 	if type == "RANGE_DAMAGE" then
