@@ -2,5 +2,6 @@
 ## Title: Bonk
 ## Notes: Plays a bonk sound when you kill another player.
 ## Version: 1.2
+## SavedVariables: BONKC
 
 Bonk.lua
