@@ -3,4 +3,6 @@ Enhance your PvP experience with the Bonk sound addon! This addon adds the featu
 ### Features
 
 *   When you get a killing blow on another player, a sound effect is played. Different sounds are used for melee and spell attacks, as well as for normal hits and critical strikes.
+*   Announcer sounds for killing streaks (double kill, multi kill etc).
 *   Plays a sound when a party member gets a killing blow on another player.
+*   Plays a sound when a party member dies.
