@@ -9,6 +9,7 @@ SFX = {
 	pew = "pew.ogg",
 	pipe = "pipe.ogg",
 	awp = "awp.ogg",
+	death = "death.ogg",
 
 	double_kill = "double_kill.ogg",
 	multi_kill = "multi_kill.ogg",
@@ -32,6 +33,7 @@ local DEFAULT_CONFIG = {
 		spell_crit = SFX.awp,
 	},
 	party_kill = SFX.coin,
+	party_death = SFX.death,
 	recent_kills = {
 		[2] = SFX.double_kill,
 		[3] = SFX.multi_kill,
@@ -186,14 +188,19 @@ local function onDamage(sourceName, overkill, critical, spellId, spellSchool)
 	end
 end
 
-local function onDeath()
-	BONK.log("you died")
-	BONK.streak_kills = 0
-	BONK.recent_kills = 0
+local function onDeath(name)
+	if name == UnitName("player") then
+		BONK.log("you died")
+		BONK.streak_kills = 0
+		BONK.recent_kills = 0
+	elseif UnitClass(name) then
+		-- party death sound
+		BONK.play(BONKC.party_death)
+	end
 end
 
 local function onCombatLogEvent(event)
-	local type, sourceName, destGUID = event[2], event[5], event[8]
+	local type, sourceName, destGUID, destName = event[2], event[5], event[8], event[9]
 
 	-- we are only interested in events where the target is a player
 	-- /!\ unless we are in debug mode
@@ -207,8 +214,8 @@ local function onCombatLogEvent(event)
 	end
 
 	-- monitor party deaths
-	if type == "UNIT_DIED" and destGUID == UnitGUID("player") then
-		onDeath()
+	if type == "UNIT_DIED" then
+		onDeath(destName)
 	end
 
 	-- look for damage events with overkill
